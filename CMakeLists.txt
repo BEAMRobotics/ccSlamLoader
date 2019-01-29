@@ -23,18 +23,18 @@ include_directories(${CloudCompareProjects_SOURCE_DIR})
 
 option(INSTALL_SLAMLOADER_PLUGIN "Check to install SLAMLOADER plugin" ON)
 
-#if (INSTALL_SLAMLOADER_PLUGIN)
-#
-#
-#    #include(../../CMakePluginTpl.cmake)
-#
-#    #set dependencies to necessary libraries (see qPCV for an example)
-#    include_directories(${PCL_INCLUDE_DIRS})
-#    include_directories(${QPCL_PLUGIN_UTILS_LIB_SOURCE_DIR}/filters)
-#    include_directories(${QPCL_PLUGIN_UTILS_LIB_SOURCE_DIR}/utils)
-#
-#    link_directories(${PCL_LIBRARY_DIRS})
-#
-#    target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES} ${PCL_LIBRARIES} QPCL_PLUGIN_UTILS_LIB nlohmann_json::nlohmann_json)
-#
-#endif ()
+if (INSTALL_SLAMLOADER_PLUGIN)
+
+
+    include(../../CMakePluginTpl.cmake)
+
+    #set dependencies to necessary libraries (see qPCV for an example)
+    include_directories(${PCL_INCLUDE_DIRS})
+    include_directories(${QPCL_PLUGIN_UTILS_LIB_SOURCE_DIR}/filters)
+    include_directories(${QPCL_PLUGIN_UTILS_LIB_SOURCE_DIR}/utils)
+
+    link_directories(${PCL_LIBRARY_DIRS})
+
+    target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES} ${PCL_LIBRARIES} QPCL_PLUGIN_UTILS_LIB nlohmann_json::nlohmann_json)
+
+endif ()
