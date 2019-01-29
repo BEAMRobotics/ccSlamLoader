@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/CC/plugin/SlamLoader">
+        <file>images/icon.png</file>
+        <file>info.json</file>
+    </qresource>
+</RCC>
+
