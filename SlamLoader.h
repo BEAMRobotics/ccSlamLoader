@@ -10,6 +10,11 @@
 #include <ccPointCloud.h>
 #include <plugins/ccStdPluginInterface.h>
 #include <sm2cc.h>
+#include <cc2sm.h>
+#include <plugins/core/qPCL/PclUtils/utils/PCLConv.h>
+#include <ccEntityAction.h>
+#include <ccScalarField.h>
+#include <plugins/core/qPCL/PclUtils/filters/MLSSmoothingUpsampling.h>
 
 // Qt
 #include <QFileDialog>
@@ -53,9 +58,11 @@ private:
   void DoActionLoadSlam();
   static void DownsampleCloud(ccPointCloud* scan, float resolution);
   void NoiseRemovalFilter(ccPointCloud* scan, float resolution);
-
+  void RGBFilter(ccPointCloud*& scan, int lower_bound, int upper_bound);
+  QString GetFirstAvailableSFName(const ccPointCloud* cloud, const QString& baseName);
   void AddScans(ccHObject* sub_folder_group, json& j);
-
+  void RGBToSF(ccPointCloud* scan);
+  void MLSFilter(ccPointCloud*& scan, float search_radius);
   data_model workingModel;
 };
 

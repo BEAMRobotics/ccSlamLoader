@@ -135,6 +135,14 @@ void SlamLoader::AddScans(ccHObject* sub_folder_group, json& j) {
         std::cout << scan->getName().toStdString() << " - " << filter
                   << " - Noise filtering" << std::endl;
         NoiseRemovalFilter(scan, filter[1]);
+      } else if (filter[0] == "rgb") {
+        std::cout << scan->getName().toStdString() << " - " << filter
+                  << " - RGB" << std::endl;
+        RGBFilter(scan, filter[1], filter[2]);
+      } else if (filter[0] == "mls") {
+        std::cout << scan->getName().toStdString() << " - " << filter
+                  << " - RGB" << std::endl;
+        MLSFilter(scan, filter[1]);
       } else {
         std::cout << "Unknown filter" << std::endl;
       };
@@ -192,4 +200,102 @@ void SlamLoader::doAction() {
   m_app->dispToConsole(
       "Example plugin shouldn't be used - it doesn't do anything!",
       ccMainAppInterface::ERR_CONSOLE_MESSAGE);
+}
+
+void SlamLoader::MLSFilter(ccPointCloud*& scan, float search_radius) {
+  //get xyz in PCL format
+  std::list<std::string> req_fields;
+  try
+  {
+    req_fields.push_back("xyz"); // always needed
+    if (scan->getCurrentDisplayedScalarField())
+    {
+      //keep the current scalar field (if any)
+      req_fields.push_back(scan->getCurrentDisplayedScalarField()->getName());
+    }
+  }
+  catch (const std::bad_alloc&)
+  {
+    //not enough memory
+    return;
+  }
+
+  //take out the xyz info
+  PCLCloud::Ptr sm_cloud = cc2smReader(scan).getAsSM(req_fields);
+  if (!sm_cloud)
+    return;
+  //get as pcl point cloud
+  pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud  (new pcl::PointCloud<pcl::PointXYZ>);
+  FROM_PCL_CLOUD(*sm_cloud, *pcl_cloud);
+  //create storage for outcloud
+  pcl::PointCloud<pcl::PointNormal>::Ptr normals (new pcl::PointCloud<pcl::PointNormal>);
+  smooth_mls<pcl::PointXYZ, pcl::PointNormal> (pcl_cloud, *m_parameters, normals);
+}
+
+void SlamLoader::RGBFilter(ccPointCloud*& scan, int lower_bound,
+                           int upper_bound) {
+  RGBToSF(scan);
+  auto minVal = static_cast<ScalarType>(lower_bound);
+  auto maxVal = static_cast<ScalarType>(upper_bound);
+  scan = scan->filterPointsByScalarValue(minVal, maxVal, false);
+}
+
+void SlamLoader::RGBToSF(ccPointCloud* cloud) {
+  ccScalarField* field = new ccScalarField(
+      qPrintable(GetFirstAvailableSFName(cloud, "Composite")));
+
+  // try to instantiate memory for each field
+  unsigned count = cloud->size();
+  if (field && !field->reserve(count)) {
+    ccLog::Warning(QString("[sfFromColor] Not enough memory to instantiate SF "
+                           "'%1' on cloud '%2'")
+                       .arg(field->getName(), cloud->getName()));
+    field->release();
+    field = nullptr;
+  }
+
+  // export points
+  for (unsigned j = 0; j < cloud->size(); ++j) {
+    const ColorCompType* rgb = cloud->getPointColor(j);
+
+    if (field)
+      field->addElement(static_cast<ScalarType>(rgb[0] + rgb[1] + rgb[2]) / 3);
+  }
+
+  QString field_str;
+  field->computeMinAndMax();
+  int sfIdx = cloud->getScalarFieldIndexByName(field->getName());
+  if (sfIdx >= 0) cloud->deleteScalarField(sfIdx);
+  sfIdx = cloud->addScalarField(field);
+  if (sfIdx >= 0) {
+    cloud->setCurrentDisplayedScalarField(sfIdx);
+    cloud->showSF(true);
+    cloud->prepareDisplayForRefresh();
+
+    if (!field_str.isEmpty()) field_str.append(", ");
+    field_str.append(field->getName());
+  } else {
+    ccLog::Warning(
+        QString("[sfFromColor] Failed to add scalar field '%1' to cloud '%2'?!")
+            .arg(field->getName(), cloud->getName()));
+    field->release();
+  }
+}
+
+QString SlamLoader::GetFirstAvailableSFName(const ccPointCloud* cloud,
+                                            const QString& baseName) {
+  if (cloud == nullptr) {
+    Q_ASSERT(false);
+    return QString();
+  }
+
+  QString name = baseName;
+  int tries = 0;
+
+  while (cloud->getScalarFieldIndexByName(qPrintable(name)) >= 0 || tries > 99)
+    name = QString("%1 #%2").arg(baseName).arg(++tries);
+
+  if (tries > 99) return QString();
+
+  return name;
 }
