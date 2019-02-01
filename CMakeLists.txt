@@ -1,12 +1,11 @@
 cmake_minimum_required(VERSION 2.8)
-project(SlamLoaderPlugin)
+
 if (POLICY CMP0020)
     cmake_policy(SET CMP0020 OLD)
 endif ()
 
-find_package(CloudCompare)
 #requires PCL
-find_package(PCL 1.7 REQUIRED)
+find_package(PCL 1.8 REQUIRED)
 add_definitions(${PCL_DEFINITIONS})
 
 find_package(nlohmann_json 3.2.0 REQUIRED)
@@ -20,11 +19,11 @@ set(CloudCompare_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../qCC)
 #include the whole CC directory (easier)
 include_directories(${CloudCompare_SOURCE_DIR})
 include_directories(${CloudCompareProjects_SOURCE_DIR})
-
+#include(custom_point_types.h)
 option(INSTALL_SLAMLOADER_PLUGIN "Check to install SLAMLOADER plugin" ON)
 
 if (INSTALL_SLAMLOADER_PLUGIN)
-
+    project(SlamLoaderPlugin)
 
     include(../../CMakePluginTpl.cmake)
 
