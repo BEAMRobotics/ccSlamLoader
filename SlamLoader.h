@@ -62,7 +62,8 @@ private:
   static void DownsampleCloud(ccPointCloud* scan, float resolution);
   void NoiseRemovalFilter(ccPointCloud* scan, float resolution);
   void RGBFilter(ccPointCloud*& scan, int lower_bound, int upper_bound);
-  QString GetFirstAvailableSFName(const ccPointCloud* cloud, const QString& baseName);
+  QString GetFirstAvailableSFName(const ccPointCloud* cloud,
+                                  const QString& baseName);
   void AddScans(ccHObject* sub_folder_group, json& j);
   void RGBToSF(ccPointCloud* scan);
   void MLSFilter(ccPointCloud* scan, float search_radius);
