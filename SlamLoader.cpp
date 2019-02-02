@@ -141,7 +141,7 @@ void SlamLoader::AddScans(ccHObject* sub_folder_group, json& j) {
         RGBFilter(scan, filter[1], filter[2]);
       } else if (filter[0] == "mls") {
         std::cout << scan->getName().toStdString() << " - " << filter
-                  << " - RGB" << std::endl;
+                  << " - MLS" << std::endl;
         MLSFilter(scan, filter[1]);
       } else {
         std::cout << "Unknown filter" << std::endl;
@@ -202,34 +202,53 @@ void SlamLoader::doAction() {
       ccMainAppInterface::ERR_CONSOLE_MESSAGE);
 }
 
-void SlamLoader::MLSFilter(ccPointCloud*& scan, float search_radius) {
-  //get xyz in PCL format
+void SlamLoader::MLSFilter(ccPointCloud* scan, float search_radius) {
+  // pointer to selected cloud
+  ccPointCloud* cloud = scan;
+
+  // get xyz in PCL format
   std::list<std::string> req_fields;
-  try
-  {
-    req_fields.push_back("xyz"); // always needed
+  try {
+    req_fields.emplace_back("xyz");
     if (scan->getCurrentDisplayedScalarField())
-    {
-      //keep the current scalar field (if any)
-      req_fields.push_back(scan->getCurrentDisplayedScalarField()->getName());
-    }
-  }
-  catch (const std::bad_alloc&)
-  {
-    //not enough memory
-    return;
+      req_fields.emplace_back(
+          scan->getCurrentDisplayedScalarField()->getName());
+  } catch (const std::bad_alloc&) {
+    return; // not enough memory
   }
 
-  //take out the xyz info
-  PCLCloud::Ptr sm_cloud = cc2smReader(scan).getAsSM(req_fields);
-  if (!sm_cloud)
-    return;
-  //get as pcl point cloud
-  pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud  (new pcl::PointCloud<pcl::PointXYZ>);
+  // take out the xyz info
+  auto sm_cloud = cc2smReader(scan).getAsSM(req_fields);
+  if (!sm_cloud) return;
+
+  // get as pcl point cloud
+  auto pcl_cloud = boost::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
   FROM_PCL_CLOUD(*sm_cloud, *pcl_cloud);
-  //create storage for outcloud
-  pcl::PointCloud<pcl::PointNormal>::Ptr normals (new pcl::PointCloud<pcl::PointNormal>);
-  smooth_mls<pcl::PointXYZ, pcl::PointNormal> (pcl_cloud, *m_parameters, normals);
+
+  // create storage for outcloud
+  auto normals = boost::make_shared<pcl::PointCloud<pcl::PointNormal>>();
+
+  pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointNormal> smoother;
+  pcl::PointIndicesPtr mapping_indices;
+  auto tree = boost::make_shared<pcl::search::KdTree<pcl::PointXYZ>>();
+
+  smoother.setInputCloud(pcl_cloud);
+  smoother.setSearchMethod(tree);
+  smoother.setSearchRadius(search_radius);
+  smoother.setComputeNormals(false);
+  smoother.setPolynomialFit(false);
+  smoother.setUpsamplingMethod(
+      pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointNormal>::NONE);
+  smoother.process(*normals);
+  mapping_indices = smoother.getCorrespondingIndices();
+
+  auto sm_normals = boost::make_shared<PCLCloud>();
+  TO_PCL_CLOUD(*normals, *sm_normals);
+
+  ccPointCloud* new_cloud = sm2ccConverter(sm_normals).getCloud();
+  copyScalarFields(scan, new_cloud, mapping_indices, true);
+  copyRGBColors(scan, new_cloud, mapping_indices, true);
+  *scan = *new_cloud;
 }
 
 void SlamLoader::RGBFilter(ccPointCloud*& scan, int lower_bound,

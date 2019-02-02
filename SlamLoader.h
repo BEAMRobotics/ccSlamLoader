@@ -9,12 +9,14 @@
 #include <ccLibAlgorithms.h>
 #include <ccPointCloud.h>
 #include <plugins/ccStdPluginInterface.h>
-#include <sm2cc.h>
-#include <cc2sm.h>
-#include <plugins/core/qPCL/PclUtils/utils/PCLConv.h>
+
 #include <ccEntityAction.h>
 #include <ccScalarField.h>
 #include <plugins/core/qPCL/PclUtils/filters/MLSSmoothingUpsampling.h>
+#include <plugins/core/qPCL/PclUtils/utils/PCLConv.h>
+#include <plugins/core/qPCL/PclUtils/utils/cc2sm.h>
+#include <plugins/core/qPCL/PclUtils/utils/copy.h>
+#include <plugins/core/qPCL/PclUtils/utils/sm2cc.h>
 
 // Qt
 #include <QFileDialog>
@@ -29,6 +31,7 @@
 #include <pcl/pcl_base.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <pcl/surface/mls.h>
 
 #include <Eigen/Eigen>
 #include <boost/filesystem.hpp>
@@ -62,7 +65,7 @@ private:
   QString GetFirstAvailableSFName(const ccPointCloud* cloud, const QString& baseName);
   void AddScans(ccHObject* sub_folder_group, json& j);
   void RGBToSF(ccPointCloud* scan);
-  void MLSFilter(ccPointCloud*& scan, float search_radius);
+  void MLSFilter(ccPointCloud* scan, float search_radius);
   data_model workingModel;
 };
 
